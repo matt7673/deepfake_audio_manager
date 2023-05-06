@@ -1,0 +1,17 @@
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+
+# extras #
+######################
+scripts
+voiceProfiles
+__pycache__
+tempCodeRunnerFile.py 
+test.py
+tests
+poetry.lock
+apiKey.txt
+tests

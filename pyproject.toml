@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "deepfake-audio-manager"
+version = "0.1.0"
+description = ""
+authors = ["Matt Farrell <matt_7673@icloud.com>"]
+readme = "README.md"
+packages = [{include = "deepfake_audio_manager"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+elevenlabslib = "^0.6.0"
+pydub = "^0.25.1"
+simpleaudio = "^1.0.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
