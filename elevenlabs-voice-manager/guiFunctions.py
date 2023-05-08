@@ -47,7 +47,6 @@ def keyPrompt():
 
         elif event == "Submit":
             apiKey = values['send']
-            print(apiKey)
             break
 
         window.bring_to_front()
@@ -247,7 +246,6 @@ def viewAudioFiles(src, voiceName, voiceObj, canRegen):
 
             elif 'regen' in event:
                 scriptName = event[5:len(event)-4] # remove unneeded bits
-                print(f'script name to regen: {scriptName}')
                 # get string for audio file user is on
                 scriptStringList = profileFunctions.getScriptListFromAudioFile(scriptName)
                 # send the script to be processed by elevenlabs
@@ -256,13 +254,10 @@ def viewAudioFiles(src, voiceName, voiceObj, canRegen):
                 window["chars"].update(f"Characters remaining: {profileFunctions.getCharactersLeft()}")
 
             elif 'edit' in event:
-                print(event)
                 scriptName = event[4:len(event)-4] # remove unneeded bits
-                print(scriptName)
                 scriptName += '.txt'
                 scriptsPath = profileFunctions.scriptsPath
                 scriptPath = scriptsPath + f'/{scriptName}'
-                print(scriptPath)
                 editScript(scriptPath, scriptsPath)
             
             elif event in scriptNames: # get index from event choice and play audio
@@ -325,7 +320,6 @@ def uploadProfile(voiceName):
                 button = window[event]
 
                 scriptName = event[4:] # remove unneeded bits
-                print(f'script name to add: {scriptName}')
                 index = sampleNames.index(scriptName)
                 samplePath = samplePaths[index]
                 
@@ -335,7 +329,6 @@ def uploadProfile(voiceName):
                 elif button.ButtonText == 'Remove':
                     chosenSamples.remove(samplePath)
                     button.update(text='Add') 
-                print(chosenSamples)
             
             elif event == 'Submit':
                 if playback != None and playback.is_playing():
@@ -617,10 +610,7 @@ def mainPage():
 
         if values['search'] != '':                         # if a keystroke entered in search field
             search = values['search']
-            print("HIYOO")
-            print(search)
             new_values = [x for x in names if search.lower() in x.lower()]  # do the filtering
-            print(new_values)
             window['names'].update(new_values)     # display in the listbox
         else:
             # display original unfiltered list

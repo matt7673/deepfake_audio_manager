@@ -31,7 +31,6 @@ def loginUser():
 
 
         user = ElevenLabsUser(apiKey)
-        print(user)
         # verify user
         try:
             user.get_current_character_count()

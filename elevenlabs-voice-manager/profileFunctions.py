@@ -11,7 +11,6 @@ tempPath = os.path.dirname(os.path.realpath(__file__))
 basePath = os.path.dirname(os.path.realpath(tempPath))
 voiceProfilePath = basePath + '/voiceProfiles'
 scriptsPath = basePath + '/scripts'
-print(scriptsPath)
 
 # always test to see if required directories are present
 if not os.path.exists(voiceProfilePath):
@@ -83,12 +82,10 @@ def getScriptListFromAudioFile(audioFileName):
         scriptName = script[:len(script)-4] # remove .txt
         
         if scriptName == audioFileName:
-            print(f'matching script {scriptName}')
             scriptPath = scriptsPath + f'/{script}'
             with open(scriptPath, 'r') as file:
                 script = file.read().replace('\n', ' ')
                 scriptStringList.append(script)
-            print(scriptStringList)
             return scriptStringList
     
     
