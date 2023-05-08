@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "deepfake-audio-manager"
+name = "elevenlabs-voice-manager"
 version = "0.1.0"
 description = ""
 authors = ["Matt Farrell <matt_7673@icloud.com>"]
 readme = "README.md"
-packages = [{include = "deepfake_audio_manager"}]
+packages = [{include = "elevenlabs-voice-manager"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"

@@ -97,12 +97,13 @@ def downloadAllScripts(voiceName, voiceObj):
     """function for generating and downloading audio using provided scripts
     voiceName: string, name of voice
     voiceObj: ElevenLabsVoiceObject"""
-
-    overwrite = True # WIP
     
     # get all text files in script directory and create a list of strings
     scriptStringList = []
     scriptNames = listdir_nohidden(scriptsPath)
+    
+    scriptNames = guiFunctions.selectScriptsForDownload(scriptNames)
+
     for scriptName in scriptNames:
         # read script file 
         scriptPath = scriptsPath + f'/{scriptName}'
@@ -110,15 +111,14 @@ def downloadAllScripts(voiceName, voiceObj):
             script = file.read().replace('\n', ' ')
             scriptStringList.append(script)
 
-    downloadScripts(scriptStringList, scriptNames, voiceName, voiceObj, overwrite)
+    downloadScripts(scriptStringList, scriptNames, voiceName, voiceObj)
 
-def downloadScripts(scriptStringList, scriptNames, voiceName, voiceObj, overwrite):
+def downloadScripts(scriptStringList, scriptNames, voiceName, voiceObj):
     ''' download 
     scriptStringList: list of strings, list of scripts
     scriptNames: list of strings, names of scripts
     voiceName: string, name of the voice to use
     voiceObj: elevenlabs voice object
-    overwrite: bool, wether or not to overwrite current file
     '''
 
     downloadsPath = voiceProfilePath + f"/{voiceName}/generatedAudio"
@@ -139,25 +139,18 @@ def downloadScripts(scriptStringList, scriptNames, voiceName, voiceObj, overwrit
             name = scriptNames[i]
             if '.txt' in name:
                 name = name[:len(name)-4] # remove .txt
-            # scriptPath = downloadsPath + f"/{name}.wav"
-
-            # # save audio to wav file
-            # if overwrite or (not os.path.exists(scriptPath)):
-            #     with open(scriptPath, mode='bw') as file:
-            #         file.write(audioData)
 
             scriptPath = downloadsPath + f"/{name}.wav"
 
             # save audio to wav file
-            if overwrite or (not os.path.exists(scriptPath)):
-                # Load the audio data
-                audio = AudioSegment.from_file(io.BytesIO(audioData), format="mp3")
-                
-                # Set the audio parameters
-                audio = audio.set_frame_rate(44100).set_channels(1).set_sample_width(2)
+            # Load the audio data
+            audio = AudioSegment.from_file(io.BytesIO(audioData), format="mp3")
+            
+            # Set the audio parameters
+            audio = audio.set_frame_rate(44100).set_channels(1).set_sample_width(2)
 
-                # Export to WAV format
-                audio.export(scriptPath, format="wav")
+            # Export to WAV format
+            audio.export(scriptPath, format="wav")
         
         break
     updateCharactersLeft()
@@ -230,22 +223,27 @@ def createVoiceProfile():
     if not canCloneVoice():
         guiFunctions.messageBox('No space left on ElevenLabs account. Please remove a voice by selecting one currently uploaded to ElevenLabs then selecting "Remove from ElevenLabs".')
         return
-    info = guiFunctions.getSamples(True)
-    if info is None:
-        return
     
-    voiceName = cleanUpString(info[0])
-    orgSamplePath = info[1]
+    # get name or return if no name was given (operation canceled)
+    name = guiFunctions.getProfileName()
+    if name ==  None:
+        return
 
-    if orgSamplePath not in (None, ''):
-        copyToSamplesDirectory(voiceName, orgSamplePath, True)
-        voiceObj = uploadToEL(voiceName)
+    src = guiFunctions.getPathToSrc()
+
+    #build destination path
+    dest = voiceProfilePath + f'/{name}'
+    os.makedirs(dest)
+
+    if src not in (None, ''):
+        copyDirectory(src, dest)
+        voiceObj = uploadToEL(name)
 
     else:
-         # path for storing samples
-        samplePath = voiceProfilePath + f'/{voiceName}/samples'
+         # create directory for storing samples
+        samplePath = voiceProfilePath + f'/{name}/samples'
 
-        # make filepath and create directory for storing samples since it does not exist
+        # make filepath and 
         if not os.path.exists(samplePath):
             os.makedirs(samplePath)
 
@@ -253,41 +251,25 @@ def createVoiceProfile():
                                add them to the profile with "Add samples to profile directory" and then try uploading again.""")
         voiceObj = None
     
-    return [voiceName, voiceObj]
+    return [name, voiceObj]
 
-def addToSamplesDirectory(voiceName):
+def addToDirectory(dest):
     # get sample path from user
-    orgSamplePath = guiFunctions.getSamples(False)
-
-    if orgSamplePath == None:
-        return 
-
-    orgSamplePath = orgSamplePath[1]
-
-    if orgSamplePath != None:
-        # add the samples to samples directory for voice
-        copyToSamplesDirectory(voiceName, orgSamplePath, False)
+    src = guiFunctions.getPathToSrc()
+    copyDirectory(src, dest)
         
-def copyToSamplesDirectory(voiceName, orgSamplePath, needNewDirectory):
-    """Adds sample files to sample directory to voice in voiceProfile directory
-    voiceName: string, name of voice
-    orgSamplePath: string, path to where samples are being copied from
-    needNewDirectory: bool, true if a new directory is needed"""
-
-    # path for storing samples
-    samplePath = voiceProfilePath + f'/{voiceName}/samples'
+def copyDirectory(src, dest):
+    """Copies files from user selected directory to destination directory 
+    src: string, src path of files to copy
+    dest: string, dest path of files to copy"""
     
     # copy files to voice samples for storing
-    if needNewDirectory:
-        try:
-            shutil.copytree(orgSamplePath, samplePath)
-        except FileExistsError:
-            guiFunctions.messageBox("Name already exists.")
-            return
-    else:
-        for sampleName in listdir_nohidden(orgSamplePath):
-            copiedSample = orgSamplePath + f'/{sampleName}'
-            shutil.copy(copiedSample, samplePath)
+    if not os.path.exists(dest):
+        os.makedirs(dest)
+
+    for fileName in listdir_nohidden(src):
+        filePath = src + f'/{fileName}'
+        shutil.copy(filePath, dest)
 
 # creates list of voice names
 # toggle: if true returns voice names in voiceProfiles directory, if false returns voice names uploaded to elevenlabs
