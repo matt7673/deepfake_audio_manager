@@ -365,7 +365,7 @@ def getProfileName():
 
         elif event == "Submit":
             name = values['send']
-            profileFunctions.cleanUpString(name)
+            name = profileFunctions.cleanUpString(name)
             if name not in profileFunctions.listdir_nohidden(profileFunctions.voiceProfilePath):
                 break
             messageBox('Name already exists.')
