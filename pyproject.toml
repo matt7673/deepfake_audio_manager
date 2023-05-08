@@ -11,6 +11,7 @@ python = "^3.10"
 elevenlabslib = "^0.6.0"
 pydub = "^0.25.1"
 simpleaudio = "^1.0.4"
+pysimplegui = "^4.60.4"
 
 
 [build-system]
