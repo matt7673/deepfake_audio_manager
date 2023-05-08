@@ -148,15 +148,17 @@ def selectScriptsForDownload(scriptNames):
             uploadScriptNames = None
             break
 
-        if values['scriptNames'] or values['uploadScriptNames']:
-            scriptName = values['scriptNames'][0] if values['scriptNames'] else values['uploadScriptNames'][0]
+        if event == 'Generate':
+            break
+
+        if (event == 'scriptNames' and values['scriptNames']) or (event == 'uploadScriptNames' and values['uploadScriptNames']):
+            scriptName = values['scriptNames'][0] if (event == 'scriptNames') else values['uploadScriptNames'][0]
+           
             window['search'].update(scriptName)
             if scriptName not in uploadScriptNames:
                 button.update(text='Add to upload')
             else:
                 button.update(text='Remove from upload')
-
-        
         
         if scriptName: #and (values['uploadScriptNames'] or values['scriptNames']):
             if event == 'View':
@@ -186,8 +188,8 @@ def selectScriptsForDownload(scriptNames):
     return uploadScriptNames
 
 def reuploadElevenLabsProfile(voiceObj, voiceName):
-    voiceObj = None
     profileFunctions.removeFromEL(voiceObj)
+    voiceObj = None
     # check if new profile can be made
     if not profileFunctions.canCloneVoice():
         messageBox('No space left on ElevenLabs account. Please remove a voice by selecting one currently uploaded to ElevenLabs then selecting "Remove from ElevenLabs".')
@@ -196,69 +198,83 @@ def reuploadElevenLabsProfile(voiceObj, voiceName):
     return voiceObj
 
 
-def viewAudioFiles(scriptNames, scriptPaths, voiceName, voiceObj, canRegen):
+def viewAudioFiles(src, voiceName, voiceObj, canRegen):
     """ creates a window displaying audio files for user to select and listen to
     scriptNames: list, name of audio files"""
+    
 
-    col = []  
-    # add script names to column
-    for scriptName in scriptNames: 
-        row = [sg.Button(scriptName, expand_x=True,font=font, disabled=True, key='label'), sg.Button('Play', auto_size_button=True, font=font, key=scriptName)]
+    while True:
+        # create list of script audio files
+        scriptNames = profileFunctions.listdir_nohidden(src)
+        # create lists for storing script audio file paths
+        scriptPaths = []
+        # fill list of script audio file paths
+        for scriptName in scriptNames:
+            scriptPath = src + scriptName
+            scriptPaths.append(scriptPath)
+
+        col = []  
+        # add script names to column
         bottomRow = [sg.Button("Return", size=(40,0), font=font), sg.Button("Add samples", size=(40,0), font=font)]
         if canRegen:
-            row += [sg.Button('Regenerate', auto_size_button=True, font=font, key=f'regen{scriptName}'), sg.Button('Edit script', auto_size_button=True, font=font, key=f'edit{scriptName}')]
             bottomRow.pop(1)
 
+        for scriptName in scriptNames: 
+            row = [sg.Button(scriptName, expand_x=True,font=font, disabled=True, key='label'), sg.Button('Play', auto_size_button=True, font=font, key=scriptName)]
+            if canRegen:
+                row += [sg.Button('Regenerate', auto_size_button=True, font=font, key=f'regen{scriptName}'), sg.Button('Edit script', auto_size_button=True, font=font, key=f'edit{scriptName}')]
 
-        col.append(row)
+            col.append(row)
 
 
-    layout = [[sg.Text(f'Select file for playback', font=font)], 
-              [sg.Text(f"Characters remaining: {profileFunctions.getCharactersLeft()}", key="chars", font=font)],
-              [sg.Column(col, scrollable=True, vertical_scroll_only=True, element_justification="c", expand_y=True, expand_x=True)],
-              bottomRow]
+        layout = [[sg.Text(f'Select file for playback', font=font)], 
+                [sg.Text(f"Characters remaining: {profileFunctions.getCharactersLeft()}", key="chars", font=font)],
+                [sg.Column(col, scrollable=True, vertical_scroll_only=True, element_justification="c", expand_y=True, expand_x=True)],
+                bottomRow]
 
-    # create window
-    window = sg.Window('Playback selection', layout, element_justification='c', size=(1200, 700), resizable=True)
+        # create window
+        window = sg.Window('Playback selection', layout, element_justification='c', size=(1200, 700), resizable=True)
 
-    playback = None
-    while True:
-        event, values = window.read()
+        playback = None
+        while True:
+            event, values = window.read()
 
-        if event in (sg.WIN_CLOSED, 'Return'):   # always check for closed window
-            break
+            if event in (sg.WIN_CLOSED, 'Return'):   # always check for closed window
+                window.close()
+                if playback != None and playback.is_playing():
+                    playback.stop()
+                return
 
-        elif 'regen' in event:
-            scriptName = event[5:len(event)-4] # remove unneeded bits
-            print(f'script name to regen: {scriptName}')
-            # get string for audio file user is on
-            scriptStringList = profileFunctions.getScriptListFromAudioFile(scriptName)
-            # send the script to be processed by elevenlabs
-            profileFunctions.downloadScripts(scriptStringList, [scriptName], voiceName, voiceObj, True)
-            # update characters
-            window["chars"].update(f"Characters remaining: {profileFunctions.getCharactersLeft()}")
+            elif 'regen' in event:
+                scriptName = event[5:len(event)-4] # remove unneeded bits
+                print(f'script name to regen: {scriptName}')
+                # get string for audio file user is on
+                scriptStringList = profileFunctions.getScriptListFromAudioFile(scriptName)
+                # send the script to be processed by elevenlabs
+                profileFunctions.downloadScripts(scriptStringList, [scriptName], voiceName, voiceObj)
+                # update characters
+                window["chars"].update(f"Characters remaining: {profileFunctions.getCharactersLeft()}")
 
-        elif 'edit' in event:
-            print(event)
-            scriptName = event[4:len(event)-4] # remove unneeded bits
-            print(scriptName)
-            scriptName += '.txt'
-            scriptsPath = profileFunctions.scriptsPath
-            scriptPath = scriptsPath + f'/{scriptName}'
-            print(scriptPath)
-            editScript(scriptPath, scriptsPath)
+            elif 'edit' in event:
+                print(event)
+                scriptName = event[4:len(event)-4] # remove unneeded bits
+                print(scriptName)
+                scriptName += '.txt'
+                scriptsPath = profileFunctions.scriptsPath
+                scriptPath = scriptsPath + f'/{scriptName}'
+                print(scriptPath)
+                editScript(scriptPath, scriptsPath)
+            
+            elif event in scriptNames: # get index from event choice and play audio
+                playback = playAudioButton(event, window, scriptNames, scriptPaths, playback)
+            
+            elif event == 'Add samples':
+                dest = profileFunctions.voiceProfilePath + f'/{voiceName}/samples'
+                profileFunctions.addToDirectory(dest)
+                break
+            window.bring_to_front()
         
-        elif event in scriptNames: # get index from event choice and play audio
-            playback = playAudioButton(event, window, scriptNames, scriptPaths, playback)
-        
-        elif event == 'Add samples':
-            dest = profileFunctions.voiceProfilePath + f'/{voiceName}'
-            profileFunctions.addToDirectory(dest)
-        window.bring_to_front()
     
-    if playback != None and playback.is_playing():
-        playback.stop()
-    window.close()
 
 def uploadProfile(voiceName):
 
@@ -266,72 +282,76 @@ def uploadProfile(voiceName):
     # path for storing samples
     samplePath = profileFunctions.voiceProfilePath + f'/{voiceName}/samples/'
 
-    # get list of sample file names
-    sampleNames = profileFunctions.listdir_nohidden(samplePath)
-
-    col = []  
-    # create list of sample file paths 
-    samplePaths = []
-    for sampleName in sampleNames:
-        samplePaths.append(samplePath + sampleName)
-
-        row = [sg.Button(sampleName, expand_x=True,font=font, disabled=True, key='label'), sg.Button('Play', auto_size_button=True, font=font, key=sampleName), 
-                sg.Button('Add', auto_size_button=True, font=font, key=f'edit{sampleName}')]
-        bottomRow = [sg.Button("Submit", size=(40,0), font=font), sg.Button("Cancel", size=(40,0), font=font), sg.Button("Add samples", size=(40,0), font=font)]
-
-        # add script names to column
-        col.append(row)
-
-
-    layout = [[sg.Text(f'Select file for playback', font=font)], 
-              [sg.Column(col, scrollable=True, vertical_scroll_only=True, element_justification="c", expand_y=True, expand_x=True)],
-              bottomRow]
-
-    # create window
-    window = sg.Window('Playback selection', layout, element_justification='c', size=(1200, 700), resizable=True)
-
-    playback = None
-    voiceObj = None
     while True:
-        event, values = window.read()
+        # get list of sample file names
+        sampleNames = profileFunctions.listdir_nohidden(samplePath)
+        col = []  
+        # create list of sample file paths 
+        samplePaths = []
+        for sampleName in sampleNames:
+            tempSamplePath = samplePath + sampleName
+            samplePaths.append(tempSamplePath)
+            if tempSamplePath in chosenSamples:
+                buttonText = 'Remove'
+            else:
+                buttonText = 'Add'
 
-        if event in (sg.WIN_CLOSED, 'Cancel'):   # always check for closed window
-            break
+            row = [sg.Button(sampleName, expand_x=True,font=font, disabled=True, key='label'), sg.Button('Play', auto_size_button=True, font=font, key=sampleName), 
+                    sg.Button(buttonText, auto_size_button=True, font=font, key=f'edit{sampleName}')]
+            bottomRow = [sg.Button("Submit", size=(40,0), font=font), sg.Button("Cancel", size=(40,0), font=font), sg.Button("Add samples", size=(40,0), font=font)]
 
-        elif 'edit' in event:
-            button = window[event]
+            # add script names to column
+            col.append(row)
 
-            scriptName = event[4:] # remove unneeded bits
-            print(f'script name to add: {scriptName}')
-            index = sampleNames.index(scriptName)
-            samplePath = samplePaths[index]
+
+        layout = [[sg.Text(f'Select file for playback', font=font)], 
+                [sg.Column(col, scrollable=True, vertical_scroll_only=True, element_justification="c", expand_y=True, expand_x=True)],
+                bottomRow]
+
+        # create window
+        window = sg.Window('Playback selection', layout, element_justification='c', size=(1200, 700), resizable=True)
+
+        playback = None
+        while True:
+            event, values = window.read()
+
+            if event in (sg.WIN_CLOSED, 'Cancel'):   # always check for closed window
+                if playback != None and playback.is_playing():
+                    playback.stop()
+                window.close()
+                return None
+
+            elif 'edit' in event:
+                button = window[event]
+
+                scriptName = event[4:] # remove unneeded bits
+                print(f'script name to add: {scriptName}')
+                index = sampleNames.index(scriptName)
+                samplePath = samplePaths[index]
+                
+                if button.ButtonText == 'Add':
+                    chosenSamples.append(samplePath)
+                    button.update(text='Remove')
+                elif button.ButtonText == 'Remove':
+                    chosenSamples.remove(samplePath)
+                    button.update(text='Add') 
+                print(chosenSamples)
             
-            if button.ButtonText == 'Add':
-                chosenSamples.append(samplePath)
-                button.update(text='Remove')
-            elif button.ButtonText == 'Remove':
-                chosenSamples.remove(samplePath)
-                button.update(text='Add') 
-            print(chosenSamples)
-        
-        elif event == 'Submit':
-            voiceObj = profileFunctions.uploadToEL(chosenSamples, voiceName)  
-            break
-        
-        elif event in sampleNames: # get index from event choice and play audio
-            playback = playAudioButton(event, window, sampleNames, samplePaths, playback)
-        
-        elif event == 'Add samples':
-            dest = profileFunctions.voiceProfilePath + f'/{voiceName}'
-            profileFunctions.addToDirectory(dest)
-        window.bring_to_front()
-    
-    if playback != None and playback.is_playing():
-        playback.stop()
-    window.close()
-    
-    
-    return voiceObj
+            elif event == 'Submit':
+                if playback != None and playback.is_playing():
+                    playback.stop()
+                window.close()
+                voiceObj = profileFunctions.uploadToEL(chosenSamples, voiceName)  
+                return voiceObj
+                        
+            elif event in sampleNames: # get index from event choice and play audio
+                playback = playAudioButton(event, window, sampleNames, samplePaths, playback)
+            
+            elif event == 'Add samples':
+                dest = profileFunctions.voiceProfilePath + f'/{voiceName}/samples'
+                profileFunctions.addToDirectory(dest)
+                break
+            window.bring_to_front()
 
 def getProfileName():
     ''' display box for user to enter the profile name when creating a new profile
@@ -522,7 +542,8 @@ def profileWindow(voiceName, voiceObj):
                 break
             
             elif event == 'Reupload profile':
-                voiceObj = reuploadElevenLabsProfile(voiceObj, voiceName)
+                if questionBox('Profile will be removed when starting this operation. Continue?'):
+                    voiceObj = reuploadElevenLabsProfile(voiceObj, voiceName)
                 break
 
             # not on eleven labs
@@ -535,10 +556,6 @@ def profileWindow(voiceName, voiceObj):
                     break
 
             #shared
-            elif event == "Add local samples":
-                dest = profileFunctions.voiceProfilePath + f'/{voiceName}'
-                profileFunctions.addToDirectory(dest)
-
             elif event == "Manage local samples":
                 profileFunctions.viewAndPlayAudio(voiceName, voiceObj, "samples")
 

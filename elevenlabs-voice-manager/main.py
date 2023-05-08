@@ -9,17 +9,20 @@ sg.theme('DarkBlue14')
 # make sure user has an API key
 def loginUser():
     # login user
+    
     tempPath = os.path.dirname(os.path.realpath(__file__))
     basePath = os.path.dirname(os.path.realpath(tempPath))
     keyPath = basePath + '/apiKey.txt'
     while True:
+        save = False
         # user has environmental key value
-        if "apiKey" in os.environ:
+        if 'apiKey' in os.environ:
             apiKey = os.environ.get('apiKey')
         else:
             # first time, creating key
             if not os.path.exists(keyPath):
                 apiKey = guiFunctions.keyPrompt()
+                save = True
 
             # user is using key file 
             else:
@@ -32,8 +35,9 @@ def loginUser():
         # verify user
         try:
             user.get_current_character_count()
-            with open(keyPath, 'w') as file:
-                file.write(apiKey)
+            if save:
+                with open(keyPath, 'w') as file:
+                    file.write(apiKey)
         except requests.exceptions.HTTPError:
             guiFunctions.messageBox("Key is invalid.")
             continue

@@ -103,15 +103,15 @@ def downloadAllScripts(voiceName, voiceObj):
     scriptNames = listdir_nohidden(scriptsPath)
     
     scriptNames = guiFunctions.selectScriptsForDownload(scriptNames)
+    if scriptNames != None:
+        for scriptName in scriptNames:
+            # read script file 
+            scriptPath = scriptsPath + f'/{scriptName}'
+            with open(scriptPath, 'r') as file:
+                script = file.read().replace('\n', ' ')
+                scriptStringList.append(script)
 
-    for scriptName in scriptNames:
-        # read script file 
-        scriptPath = scriptsPath + f'/{scriptName}'
-        with open(scriptPath, 'r') as file:
-            script = file.read().replace('\n', ' ')
-            scriptStringList.append(script)
-
-    downloadScripts(scriptStringList, scriptNames, voiceName, voiceObj)
+        downloadScripts(scriptStringList, scriptNames, voiceName, voiceObj)
 
 def downloadScripts(scriptStringList, scriptNames, voiceName, voiceObj):
     ''' download 
@@ -164,26 +164,15 @@ def viewAndPlayAudio(voiceName, voiceObj, location):
     # adds button for regenerating a specific audio sample
     canRegen = (location == "generatedAudio") and (voiceObj != None)
 
-    # create path to directory containing downloaded script files
-    downloadsPath = voiceProfilePath + f"/{voiceName}/{location}/"
+    # create path to directory containing src of audio file
+    src = voiceProfilePath + f"/{voiceName}/{location}/"
 
-    # make filepath and create directory for storing downloads if it does not exist
-    if not os.path.exists(downloadsPath):
-        os.makedirs(downloadsPath)
-
-    # create list of script audio files
-    scriptNames = listdir_nohidden(downloadsPath)
-
-    # create lists for storing script audio file paths
-    scriptPaths = []
-
-    # fill list of script audio file paths
-    for scriptName in scriptNames:
-        scriptPath = downloadsPath + scriptName
-        scriptPaths.append(scriptPath)
+    # make filepath and create directory for storing downloads if it does not exist. likely not needed anymore
+    if not os.path.exists(src):
+        os.makedirs(src)
 
     # pass info to GUI function to create window
-    guiFunctions.viewAudioFiles(scriptNames,scriptPaths, voiceName, voiceObj, canRegen)
+    guiFunctions.viewAudioFiles(src, voiceName, voiceObj, canRegen)
 
 def removeFromEL(voiceObj):
     '''Removes voice from ElevenLabs'''
@@ -232,23 +221,25 @@ def createVoiceProfile():
     src = guiFunctions.getPathToSrc()
 
     #build destination path
-    dest = voiceProfilePath + f'/{name}'
+    dest = voiceProfilePath + f'/{name}/generatedAudio'
     os.makedirs(dest)
+    dest = voiceProfilePath + f'/{name}/samples'
+    os.makedirs(dest)
+    
 
     if src not in (None, ''):
         copyDirectory(src, dest)
-        voiceObj = uploadToEL(name)
+        # creates list of file paths to send to elevenlabs
+        filePaths = []
+        for fileName in listdir_nohidden(dest):
+            path = dest + f'/{fileName}'
+            filePaths.append(path)
+
+        voiceObj = uploadToEL(filePaths, name)
 
     else:
-         # create directory for storing samples
-        samplePath = voiceProfilePath + f'/{name}/samples'
-
-        # make filepath and 
-        if not os.path.exists(samplePath):
-            os.makedirs(samplePath)
-
         guiFunctions.messageBox("""A profile was created, however a directory containing samples must be selected to upload to ElevenLabs. Once you have a directory of samples
-                               add them to the profile with "Add samples to profile directory" and then try uploading again.""")
+                               add them to the profile with "Manage local samples" and then try uploading again.""")
         voiceObj = None
     
     return [name, voiceObj]
